@@ -1,0 +1,126 @@
+#input
+
+# NFA accept end with 1x
+'''
+QN = ['A', 'B', 'C']
+AlphabetN = ['0', '1']
+initialStateN = 'A'
+finalStateN = ['C']
+transitionTableN = [[{'A'}, {'A', 'B'}],[{'C'},{'C'}],[set({}),set({})]]
+'''
+#NFA accept end with 1xx
+
+
+QN = ['A', 'B', 'C', 'D'] #สถานะ NFA 
+AlphabetN = ['0', '1'] #alphabet
+initialStateN = 'A' #start state
+finalStateN = ['D'] #final state
+transitionTableN = [[{'A'}, {'A', 'B'}],  [{'C'},{'C'}],  [{'D'},{'D'}],  [set(),set()]]
+# NFA accept w | end with 1xx
+# transition table of NFA   set() is empty set
+
+
+#output
+QD = [set()]
+AlphabetD = ['0', '1']
+initialStateD = set(initialStateN)
+finalStateD = []
+transitionTableD = []
+
+#output After cut useless
+QDNew = []
+finalStateDNew = []
+transitionTableDNew = []
+
+
+def powerset(QN):  #หา powerset ของ QN
+ global QD
+ for s in QD:  #start with QD = empty set. หยิบ s ใน QD แต่ละตัว
+  #print("s = ",s)
+  for x in QN:  # หยิบ สถานะใน QN แต่ละตัว
+    temp = s.copy()   #คัดลอก สถานะใน QD ตัวแรกเป็น empty set
+    temp.add(x)  # เพิ่มสมาชิก x เป็น set ลงใน temp
+    if len(QD) < (2 ** len(QN)):  #ถ้า ขนาดยังไม่ถึง 2^|QN|
+      if temp not in QD: #ถ้า temp ไม่มีใน QD 
+        QD.append(temp)  #เพิ่ม เซต ใหม่ลงใน QD
+    else:
+      break
+
+def finalStateNFAtoDFA(): #หา final state ของ DFA output
+  global finalStateD
+  # x intersect กับ F ของ NFA แล้วไม่เท่ากับ เซตว่าง
+  for x in QD: #หยิบ สถานะ ใน QD
+    for s in finalStateN:  #ดู สถานะ s ใน F ของ NFA
+      if s in x:  # ถ้า s มีใน x แสดงว่า มีอย่างน้อย 1 เส้นทาง ไปถึง final state
+        finalStateD.append(x)
+        break
+
+def transitionNFAtoDFA(): #คำนวณ transitionของ DFA output
+  global transitionTableD, transitionTableN
+  transitionTableD = [[set() for i in range(len(AlphabetN))] for i in range(2**len(QN))]
+  #สร้าง array ของ transition โดยให้สมาชิกทุกตัวของ DFA output เป็นเซตว่าง 
+  #transitionTableD[0] = [{}, {}] # ตัวแรกเป็น เซตว่าง
+  print("size of Table = ", len(transitionTableD))
+  result = set()  #ผลลัพธ์ การ transition ในแต่ละรอบ
+  for state in QD: #set  {'A'}, {'A', 'B'}
+    for j in range(len(AlphabetN)): # ทุกตัวใน alphabet
+      result.clear()
+      for x in state: # วนซ้ำทุกตัวใน สถานะที่เป็น set
+        result = result.union(transitionTableN[QN.index(x)][j]) # return set
+      transitionTableD[QD.index(state)][j] = result.copy()
+
+def cutUselessState(): #ตัดสถานะที่ไม่มีทางไปถึง
+  global QD
+  QueState = [] #ใช้ Queue มาช่วยในการเก็บสถานะปลายทางที่ต้องดูต่อ
+  checkReachableState = [False for i in range(len(QD))]
+  QueState.append(QD[1]) # first State
+  checkReachableState[1] = True
+  for state in QueState:
+    #print("state = ",state)
+    for i in range(len(AlphabetD)):
+      tempState = transitionTableD[QD.index(state)][i]
+      #print(tempState)
+      if tempState not in QueState:
+        QueState.append(tempState)
+        checkReachableState[QD.index(tempState)] = True
+  #print(checkReachableState)
+  for i in range(len(checkReachableState)):
+    if checkReachableState[i] == True:
+      QDNew.append(QD[i])
+      transitionTableDNew.append(transitionTableD[i])
+
+  for state in finalStateD:
+    if state in QDNew:
+      finalStateDNew.append(state)
+
+
+def transformNFAtoDFA(QN):
+  powerset(QN)
+  finalStateNFAtoDFA()
+  transitionNFAtoDFA()
+  cutUselessState()
+
+def printTransformedDFA():
+  print("\nDFA before cutting states\n")
+  for i in range(len(QD)):
+    if QD[i] in finalStateD:
+      print("*", QD[i],"|",transitionTableD[i])
+    else:
+      if QD[i] == initialStateD:
+        print("->",QD[i],"|",transitionTableD[i])
+      else:
+        print(QD[i],"|",transitionTableD[i])
+
+  print("\nDFA after cutting states\n")
+  for i in range(len(QDNew)):
+    if QDNew[i] in finalStateDNew:
+      print("*", QDNew[i],"|",transitionTableDNew[i])
+    else:
+      if QDNew[i] == initialStateD:
+        print("->",QDNew[i],"|",transitionTableDNew[i])
+      else:
+        print(QDNew[i],"|",transitionTableDNew[i])
+    
+
+transformNFAtoDFA(QN)
+printTransformedDFA()
